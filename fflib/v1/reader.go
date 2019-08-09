@@ -27,20 +27,47 @@ import (
 const sliceStringMask = cIJC | cNFP
 
 type ffReader struct {
+	r io.Reader
 	s []byte
 	i int
 	l int
 }
 
+func newffReaderReader(r io.Reader) *ffReader {
+	return &ffReader{
+		r: r,
+		s: []byte{},
+		i: 0,
+		l: 0,
+	}
+}
+
 func newffReader(d []byte) *ffReader {
 	return &ffReader{
+		r: nil,
 		s: d,
 		i: 0,
 		l: len(d),
 	}
 }
 
+func (r *ffReader) ReadTo(i int) error {
+	if i >= r.l {
+		if r.r == nil {
+			return io.EOF
+		}
+
+		buf := make([]byte, i-r.l)
+		n, err := r.r.Read(buf)
+		r.l += n
+		r.s = append(r.s, buf[:n]...)
+		return err
+	}
+	return nil
+}
+
 func (r *ffReader) Slice(start, stop int) []byte {
+	// err := r.ReadTo(stop) // Current usage ensures that stop == r.Pos() < r.l
 	return r.s[start:stop]
 }
 
@@ -49,7 +76,15 @@ func (r *ffReader) Pos() int {
 }
 
 // Reset the reader, and add new input.
+func (r *ffReader) ResetReader(reader io.Reader) {
+	r.r = reader
+	r.s = []byte{}
+	r.i = 0
+	r.l = 0
+}
+
 func (r *ffReader) Reset(d []byte) {
+	r.r = nil
 	r.s = d
 	r.i = 0
 	r.l = len(d)
@@ -76,8 +111,8 @@ func (r *ffReader) PosWithLine() (int, int) {
 }
 
 func (r *ffReader) ReadByteNoWS() (byte, error) {
-	if r.i >= r.l {
-		return 0, io.EOF
+	if err := r.ReadTo(r.i); err != nil {
+		return 0, err
 	}
 
 	j := r.i
@@ -105,15 +140,15 @@ func (r *ffReader) ReadByteNoWS() (byte, error) {
 			return c, nil
 		}
 
-		if j >= r.l {
-			return 0, io.EOF
+		if err := r.ReadTo(j); err != nil {
+			return 0, err
 		}
 	}
 }
 
 func (r *ffReader) ReadByte() (byte, error) {
-	if r.i >= r.l {
-		return 0, io.EOF
+	if err := r.ReadTo(r.i); err != nil {
+		return 0, err
 	}
 
 	r.i++
@@ -133,8 +168,8 @@ func (r *ffReader) readU4(j int) (rune, error) {
 
 	var u4 [4]byte
 	for i := 0; i < 4; i++ {
-		if j >= r.l {
-			return -1, io.EOF
+		if err := r.ReadTo(j); err != nil {
+			return -1, err
 		}
 		c := r.s[j]
 		if byteLookupTable[c]&cVHC != 0 {
@@ -156,8 +191,8 @@ func (r *ffReader) readU4(j int) (rune, error) {
 }
 
 func (r *ffReader) handleEscaped(c byte, j int, out DecodingBuffer) (int, error) {
-	if j >= r.l {
-		return 0, io.EOF
+	if err := r.ReadTo(j); err != nil {
+		return 0, err
 	}
 
 	c = r.s[j]
@@ -226,8 +261,8 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 	j := r.i
 
 	for {
-		if j >= r.l {
-			return io.EOF
+		if err := r.ReadTo(j); err != nil {
+			return err
 		}
 
 		j, c = scanString(r.s, j)
