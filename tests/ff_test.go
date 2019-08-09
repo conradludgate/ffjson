@@ -18,6 +18,8 @@
 package tff
 
 import (
+	"io"
+
 	"github.com/pquerna/ffjson/ffjson"
 	fflib "github.com/pquerna/ffjson/fflib/v1"
 	"github.com/stretchr/testify/require"
@@ -142,6 +144,26 @@ func BenchmarkSimpleUnmarshal(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := record.UnmarshalJSON(buf)
+		if err != nil {
+			b.Fatalf("UnmarshalJSON: %v", err)
+		}
+	}
+}
+
+func BenchmarkSimpleUnmarshalReader(b *testing.B) {
+	record := newLogFFRecord()
+	buf := []byte(`{"id": 123213, "OriginID": 22, "meth": "GET"}`)
+	r := bytes.NewReader(buf)
+	err := record.UnmarshalJSONReader(r)
+	if err != nil {
+		b.Fatalf("UnmarshalJSON: %v", err)
+	}
+	b.SetBytes(int64(len(buf)))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Seek(0, io.SeekStart)
+		err := record.UnmarshalJSONReader(r)
 		if err != nil {
 			b.Fatalf("UnmarshalJSON: %v", err)
 		}

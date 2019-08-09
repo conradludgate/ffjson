@@ -119,6 +119,18 @@ func NewFFLexer(input []byte) *FFLexer {
 	return fl
 }
 
+func NewFFLexerReader(r io.Reader) *FFLexer {
+	fl := &FFLexer{
+		Token:  FFTok_init,
+		Error:  FFErr_e_ok,
+		reader: newffReaderReader(r),
+		Output: &Buffer{},
+	}
+	// TODO: guess size?
+	//fl.Output.Grow(64)
+	return fl
+}
+
 type LexerError struct {
 	offset int
 	line   int

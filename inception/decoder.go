@@ -41,6 +41,7 @@ func CreateUnmarshalJSON(ic *Inception, si *StructInfo) error {
 	if len(si.Fields) > 0 {
 		ic.OutputImports[`"bytes"`] = true
 	}
+	ic.OutputImports[`"io"`] = true
 	ic.OutputImports[`"fmt"`] = true
 
 	out += tplStr(decodeTpl["header"], header{

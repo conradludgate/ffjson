@@ -535,6 +535,12 @@ func (j *{{.SI.Name}}) UnmarshalJSON(input []byte) error {
     return j.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
 }
 
+// UnmarshalJSONReader umarshall json - template of ffjson
+func (j *{{.SI.Name}}) UnmarshalJSONReader(r io.Reader) error {
+    fs := fflib.NewFFLexerReader(r)
+    return j.UnmarshalJSONFFLexer(fs, fflib.FFParse_map_start)
+}
+
 // UnmarshalJSONFFLexer fast json unmarshall - template ffjson
 func (j *{{.SI.Name}}) UnmarshalJSONFFLexer(fs *fflib.FFLexer, state fflib.FFParseState) error {
 	var err error

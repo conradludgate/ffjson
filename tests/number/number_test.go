@@ -18,6 +18,7 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"testing"
@@ -64,6 +65,15 @@ const (
 func TestUnmarshalFull(t *testing.T) {
 	record := ff.Number{}
 	err := record.UnmarshalJSON([]byte(numberJSON))
+	if err != nil {
+		t.Fatalf("UnmarshalJSON: %v", err)
+	}
+}
+
+func TestUnmarshalFullReader(t *testing.T) {
+	record := ff.Number{}
+	r := bytes.NewBufferString(numberJSON)
+	err := record.UnmarshalJSONReader(r)
 	if err != nil {
 		t.Fatalf("UnmarshalJSON: %v", err)
 	}

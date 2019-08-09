@@ -57,7 +57,9 @@ func (r *ffReader) ReadTo(i int) error {
 			return io.EOF
 		}
 
-		buf := make([]byte, i-r.l)
+		// Current usage would call this every byte, use minRead instead.
+		// Might cause problems if i-r.l > minRead
+		buf := make([]byte, minRead)
 		n, err := r.r.Read(buf)
 		r.l += n
 		r.s = append(r.s, buf[:n]...)
@@ -265,7 +267,7 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 			return err
 		}
 
-		j, c = scanString(r.s, j)
+		j, c = r.scanString(j)
 
 		if c == '"' {
 			if j != r.i {
@@ -283,6 +285,22 @@ func (r *ffReader) SliceString(out DecodingBuffer) error {
 			return fmt.Errorf("lex_string_invalid_json_char: %v", c)
 		}
 		continue
+	}
+}
+
+func (r *ffReader) scanString(j int) (int, byte) {
+	for {
+		if err := r.ReadTo(j); err != nil {
+			return j, 0
+		}
+
+		c := r.s[j]
+		j++
+		if byteLookupTable[c]&sliceStringMask == 0 {
+			continue
+		}
+
+		return j, c
 	}
 }
 

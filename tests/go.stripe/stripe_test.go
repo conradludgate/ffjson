@@ -18,10 +18,14 @@
 package goser
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
+	"io/ioutil"
+	"testing"
+
 	base "github.com/pquerna/ffjson/tests/go.stripe/base"
 	ff "github.com/pquerna/ffjson/tests/go.stripe/ff"
-	"testing"
 )
 
 func TestRoundTrip(t *testing.T) {
@@ -111,6 +115,39 @@ func BenchmarkFFUnmarshalJSON(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := rec.UnmarshalJSON(buf)
+		if err != nil {
+			b.Fatalf("UnmarshalJSON: %v", err)
+		}
+	}
+}
+
+func BenchmarkFFUnmarshalJSONReader(b *testing.B) {
+	rec := ff.Customer{}
+	buf := getBaseData(b)
+	r := bytes.NewReader(buf)
+	b.SetBytes(int64(len(buf)))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Seek(0, io.SeekStart)
+		err := rec.UnmarshalJSONReader(r)
+		if err != nil {
+			b.Fatalf("UnmarshalJSON: %v", err)
+		}
+	}
+}
+
+func BenchmarkFFUnmarshalJSONReaderReadFirst(b *testing.B) {
+	rec := ff.Customer{}
+	buf := getBaseData(b)
+	r := bytes.NewReader(buf)
+	b.SetBytes(int64(len(buf)))
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.Seek(0, io.SeekStart)
+		byt, _ := ioutil.ReadAll(r)
+		err := rec.UnmarshalJSON(byt)
 		if err != nil {
 			b.Fatalf("UnmarshalJSON: %v", err)
 		}
